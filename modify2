@@ -1,0 +1,104 @@
+from tkinter import *
+import random
+import math
+import numpy as np
+import sys
+#from pixel import Pixel
+window = Tk()
+perpendicular_top=[]
+perpendicular_bottom=[]
+road_pixels = []
+road_canvas = Canvas(window, width=800, height=600)
+
+def draw_line():
+    pixels = []
+    for pixel in road_pixels:
+        pixels.append(pixel)
+
+    road_canvas.create_line(pixels, fill="brown")
+
+
+def dist(p_1, p_2):
+    return math.sqrt((math.pow(p_2[0] - p_1[0], 2)) +
+                     (math.pow(p_2[1] - p_1[1], 2)))
+
+def find_coord(coord, dist_ratio):
+	return (road_pixels[0][coord] +
+            (dist_ratio *
+             (road_pixels[len(road_pixels)-1][coord] -
+              road_pixels[0][coord])))
+
+def find_pixel(dist_to_pixel, seg_len):
+    return (find_coord(0, (dist_to_pixel/seg_len)),
+                  find_coord(1, (dist_to_pixel/seg_len)))	
+
+def calc_pixel_line():
+    seg_len = dist(road_pixels[0], road_pixels[len(road_pixels)-1])
+    index = 1
+    for pixel_index in range(0, round(seg_len)-2, 2):
+        dist_to_n_pixel = pixel_index+2
+        road_pixels.insert(index, find_pixel(dist_to_n_pixel, seg_len))
+        index += 1               
+def click(event):
+    if len(road_pixels) < 3:
+        print("clicked at", event.x, event.y)
+        road_pixels.append((event.x, event.y))
+        if len(road_pixels) == 2:
+            road_canvas.unbind("<Button-1>")
+            calc_pixel_line()
+            draw_line()
+            for item in road_pixels:
+            	print(item)
+            	
+
+def classifier_color(event):
+	for item in road_pixels:
+		rand=random.randint(0,1)
+		if(rand):	
+			road_canvas.create_line(item,item,fill="pink")
+
+def thicken_line_segment(p1, p2, wide):
+    '''
+    Given a line segment as a pair of points and a width, return
+    a rectangle with that width.
+    '''
+    # perpendicular
+    perp1 = np.array([p1[1] - p2[1], p2[0] - p1[0]])
+    perp2 = np.array([p2[1] - p1[1], p1[0] - p2[0]])
+
+    unit_perp1 = perp1 / np.linalg.norm(perp1)
+    unit_perp2 = perp2 / np.linalg.norm(perp2)
+
+    polygon = [tuple(item) for item in [p1 + unit_perp1 * wide, p2 + unit_perp1 * wide, p2 + unit_perp2 * wide, p1 + unit_perp2 * wide]]
+    # points = check_within_bound(polygon[0:2], bound_box) + check_within_bound(polygon[2:], bound_box)
+
+    return polygon
+def key(event):
+    length=len(road_pixels)
+    j=0
+    while j < 10:
+
+        for i in range(0,len(road_pixels)-1):
+
+            polygon= thicken_line_segment(road_pixels[i],road_pixels[i+1],j+1)
+            perpendicular_bottom.append([])
+            perpendicular_top.append([])
+            perpendicular_bottom[j].append(polygon[0])
+            perpendicular_top[j].append(polygon[3])
+        perpendicular_bottom[j].append(polygon[1])
+        perpendicular_top[j].append(polygon[2])    
+
+        road_canvas.create_line(perpendicular_bottom[j],fill="black")
+        road_canvas.create_line(perpendicular_top[j],fill="green")
+         
+        j=j+1   
+def exit(event):
+    sys.exit()
+
+road_canvas.bind("<Button-1>", click)
+road_canvas.bind("<Button-3>", classifier_color)
+road_canvas.bind("<Left>",key)
+road_canvas.bind("e",exit)
+road_canvas.focus_set()
+road_canvas.pack()
+window.mainloop()
